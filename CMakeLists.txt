@@ -29,5 +29,5 @@ target_include_directories(tree_sitter_cpp
 )
 
 # ---------- Actual tool ----------
-add_executable(ast_tool src/main.cpp)
+add_executable(ast_tool src/main.cpp src/file_parser.cpp src/tree_printer.cpp)
 target_link_libraries(ast_tool PRIVATE tree_sitter tree_sitter_cpp)
