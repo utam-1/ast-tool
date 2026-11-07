@@ -1,33 +1,22 @@
 cmake_minimum_required(VERSION 3.14)
-project(ast_tool LANGUAGES C CXX)
+project(docmerge LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_C_STANDARD 11)           
-set(CMAKE_C_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)
 endif()
 
-# ---------- 1. Tree-sitter core ----------
-add_library(tree_sitter STATIC
-    third_party/tree-sitter/lib/src/lib.c
-)
-target_include_directories(tree_sitter
-    PUBLIC  third_party/tree-sitter/lib/include
-    PRIVATE third_party/tree-sitter/lib/src
+if(MSVC)
+    add_compile_options(/W4)
+else()
+    add_compile_options(-Wall -Wextra -Wpedantic)
+endif()
+
+add_executable(docmerge
+    src/main.cpp
 )
 
-# ---------- 2. C++ grammar ----------
-add_library(tree_sitter_cpp STATIC
-    third_party/tree-sitter-cpp/src/parser.c
-    third_party/tree-sitter-cpp/src/scanner.c
-)
-target_include_directories(tree_sitter_cpp
-    PRIVATE third_party/tree-sitter-cpp/src
-)
-
-# ---------- Actual tool ----------
-add_executable(ast_tool src/main.cpp src/file_parser.cpp src/tree_printer.cpp)
-target_link_libraries(ast_tool PRIVATE tree_sitter tree_sitter_cpp)
+enable_testing()

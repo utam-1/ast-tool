@@ -1,29 +1,38 @@
-#include "file_parser.hpp"
-#include "tree_printer.hpp"
-
 #include <iostream>
 #include <string>
 
+namespace {
+
+void printUsage(std::ostream& out) {
+    out << "Usage: docmerge <command> [options]\n\n"
+        << "Commands:\n"
+        << "  merge BASE OURS THEIRS [MARKER_SIZE] [PATH]  Run 3-way merge driver\n"
+        << "  resolve FILE                                 Resolve conflicted file in place\n"
+        << "  check [FILE...]                              Validate config and parse files\n"
+        << "  dump FILE                                    Print parsed block tree\n"
+        << "  init FILE                                    Infer draft .docmerge.toml\n"
+        << "  install                                      Configure git merge driver\n";
+}
+
+}  // namespace
+
 int main(int argc, char** argv) {
-    PrintOptions opts;
-    std::string path;
-
-    for (int i = 1; i < argc; ++i) {
-        std::string arg = argv[i];
-        if (arg == "--all") opts.showAnonymous = true;
-        else path = arg;
-    }
-    if (path.empty()) {
-        std::cerr << "Usage: ast_tool [--all] <file.cpp>\n";
+    if (argc < 2) {
+        printUsage(std::cerr);
         return 1;
     }
 
-    try {
-        ParsedFile file = ParsedFile::parse(path);
-        PrintTree(file.root(), file.source(), std::cout, opts);
-    } catch (const std::exception& e) {
-        std::cerr << "Error: " << e.what() << "\n";
-        return 1;
+    const std::string cmd = argv[1];
+    if (cmd == "--help" || cmd == "-h" || cmd == "help") {
+        printUsage(std::cout);
+        return 0;
     }
-    return 0;
+
+    if (cmd == "--version" || cmd == "-v") {
+        std::cout << "docmerge 0.1.0\n";
+        return 0;
+    }
+
+    std::cerr << "docmerge: command '" << cmd << "' is not implemented yet.\n";
+    return 1;
 }
