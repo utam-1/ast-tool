@@ -16,6 +16,12 @@ struct Line {
     bool ContentEquals(const Line& other) const noexcept {
         return hash == other.hash && text == other.text;
     }
+    bool operator==(const Line& other) const noexcept {
+        return hash == other.hash && text == other.text && eol == other.eol;
+    }
+    bool operator!=(const Line& other) const noexcept {
+        return !(*this == other);
+    }
 };
 
 struct SplitDocumentLines {
@@ -34,3 +40,4 @@ std::string joinLines(const std::vector<Line>& lines, bool hasBom = false);
 Line makeLine(std::string text, std::string eol = "\n");
 
 }  // namespace docmerge::doc
+

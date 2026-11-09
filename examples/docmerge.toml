@@ -1,0 +1,53 @@
+version = 1
+
+# 1. GNU ChangeLog (dated, newest first)
+[[doc]]
+paths = ["ChangeLog", "**/ChangeLog"]
+
+  [[doc.level]]
+  name  = "entry"
+  start = 'date(YYYY-MM-DD) as date ws any as who'
+  key   = "header"
+  order = "date-desc"
+
+  [[doc.level]]
+  name   = "item"
+  start  = 'tab "* "'
+  key    = "text"
+  insert = "bottom"
+
+# 2. GnuCOBOL-style NEWS (outline, no dates)
+[[doc]]
+paths = ["NEWS", "**/NEWS"]
+
+  [[doc.level]]
+  name  = "section"
+  start = '"* " any as title'
+  key   = "header"
+
+  [[doc.level]]
+  name   = "entry"
+  start  = '"** " any as title'
+  key    = "header"
+  insert = "bottom"
+
+# 3. Keep a Changelog Markdown
+[[doc]]
+paths = ["CHANGELOG.md", "**/CHANGELOG.md"]
+
+  [[doc.level]]
+  name   = "release"
+  start  = '"## " any as title'
+  key    = "header"
+  insert = "top"
+
+  [[doc.level]]
+  name  = "category"
+  start = '"### " any as title'
+  key   = "header"
+
+  [[doc.level]]
+  name   = "item"
+  start  = '"- " any'
+  key    = "text"
+  insert = "bottom"

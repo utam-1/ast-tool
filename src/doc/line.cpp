@@ -78,3 +78,4 @@ std::string joinLines(const std::vector<Line>& lines, bool hasBom) {
 }
 
 }  // namespace docmerge::doc
+
