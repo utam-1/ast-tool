@@ -179,3 +179,4 @@ Diff3Result diff3Merge(const std::vector<doc::Line>& base,
 }
 
 }  // namespace docmerge::merge
+

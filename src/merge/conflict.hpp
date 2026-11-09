@@ -29,3 +29,4 @@ std::vector<doc::Line> formatConflictLines(
     const ConflictMarkerConfig& cfg);
 
 }  // namespace docmerge::merge
+

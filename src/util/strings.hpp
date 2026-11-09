@@ -26,3 +26,4 @@ bool startsWith(std::string_view s, std::string_view prefix) noexcept;
 bool endsWith(std::string_view s, std::string_view suffix) noexcept;
 
 }  // namespace docmerge::util
+

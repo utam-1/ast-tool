@@ -17,3 +17,4 @@ uint64_t hashCombine(uint64_t seed, uint64_t value) noexcept {
 }
 
 }  // namespace docmerge::util
+

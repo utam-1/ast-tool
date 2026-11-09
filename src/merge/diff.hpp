@@ -34,3 +34,4 @@ DiffResult diffLines(const std::vector<doc::Line>& a,
                      size_t maxEditDistance = kDefaultMaxEditDistance);
 
 }  // namespace docmerge::merge
+

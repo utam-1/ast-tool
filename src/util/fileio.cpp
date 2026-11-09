@@ -63,3 +63,4 @@ bool containsNulByte(std::string_view content) noexcept {
 }
 
 }  // namespace docmerge::util
+

@@ -15,3 +15,4 @@ uint64_t fnv1a64(std::string_view data, uint64_t seed = kFnvOffsetBasis) noexcep
 uint64_t hashCombine(uint64_t seed, uint64_t value) noexcept;
 
 }  // namespace docmerge::util
+

@@ -86,3 +86,4 @@ inline int runAllTests() {
             ::minitest::reportFailure(__FILE__, __LINE__, oss.str());         \
         }                                                                     \
     } while (false)
+

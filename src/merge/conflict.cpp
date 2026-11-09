@@ -58,3 +58,4 @@ std::vector<doc::Line> formatConflictLines(
 }
 
 }  // namespace docmerge::merge
+

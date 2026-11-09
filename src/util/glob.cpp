@@ -91,3 +91,4 @@ bool globMatchAny(const std::vector<std::string>& patterns, std::string_view pat
 }
 
 }  // namespace docmerge::util
+

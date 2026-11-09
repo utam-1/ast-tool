@@ -159,3 +159,4 @@ TEST_CASE(cli_merge_driver_end_to_end) {
 int main() {
     return minitest::runAllTests();
 }
+

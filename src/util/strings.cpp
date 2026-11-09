@@ -83,3 +83,4 @@ bool endsWith(std::string_view s, std::string_view suffix) noexcept {
 }
 
 }  // namespace docmerge::util
+

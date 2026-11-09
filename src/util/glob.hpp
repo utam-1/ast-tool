@@ -14,3 +14,4 @@ bool globMatch(std::string_view pattern, std::string_view path);
 bool globMatchAny(const std::vector<std::string>& patterns, std::string_view path);
 
 }  // namespace docmerge::util
+

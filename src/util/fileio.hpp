@@ -16,3 +16,4 @@ bool writeFileAtomic(const std::string& path, std::string_view content, std::str
 bool containsNulByte(std::string_view content) noexcept;
 
 }  // namespace docmerge::util
+

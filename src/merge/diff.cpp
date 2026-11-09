@@ -144,3 +144,4 @@ DiffResult diffLines(const std::vector<doc::Line>& a,
 }
 
 }  // namespace docmerge::merge
+

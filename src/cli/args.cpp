@@ -64,3 +64,4 @@ ParsedArgs parseCommandLine(int argc, char** argv) {
 }
 
 }  // namespace docmerge::cli
+

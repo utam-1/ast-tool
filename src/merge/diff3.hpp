@@ -34,3 +34,4 @@ Diff3Result diff3Merge(const std::vector<doc::Line>& base,
                        size_t maxEditDistance = 20000);
 
 }  // namespace docmerge::merge
+
