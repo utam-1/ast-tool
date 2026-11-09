@@ -16,3 +16,4 @@ InitInferenceResult inferConfigFromSample(std::string_view filePath,
                                           std::string_view rawBytes);
 
 }  // namespace docmerge::cli
+

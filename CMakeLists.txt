@@ -73,3 +73,13 @@ target_compile_definitions(test_tree_merge_and_cli PRIVATE
 )
 target_link_libraries(test_tree_merge_and_cli PRIVATE docmerge_core)
 add_test(NAME test_tree_merge_and_cli COMMAND test_tree_merge_and_cli)
+
+add_executable(test_real_oss_and_git
+    tests/unit/test_real_oss_and_git.cpp
+)
+target_compile_definitions(test_real_oss_and_git PRIVATE
+    DOCMERGE_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}"
+    DOCMERGE_BINARY_PATH="$<TARGET_FILE:docmerge>"
+)
+target_link_libraries(test_real_oss_and_git PRIVATE docmerge_core)
+add_test(NAME test_real_oss_and_git COMMAND test_real_oss_and_git)

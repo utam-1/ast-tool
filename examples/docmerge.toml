@@ -1,8 +1,8 @@
 version = 1
 
-# 1. GNU ChangeLog (dated, newest first)
+# 1. GNU ChangeLog (GCC, GnuCOBOL, Binutils, GDB, etc. — dated, newest first)
 [[doc]]
-paths = ["ChangeLog", "**/ChangeLog"]
+paths = ["ChangeLog", "**/ChangeLog", "ChangeLog*", "**/ChangeLog*"]
 
   [[doc.level]]
   name  = "entry"
@@ -16,7 +16,28 @@ paths = ["ChangeLog", "**/ChangeLog"]
   key    = "text"
   insert = "bottom"
 
-# 2. GnuCOBOL-style NEWS (outline, no dates)
+# 2. GNU Coreutils-style NEWS (2-space indented paragraph items under ** sections)
+[[doc]]
+paths = ["NEWS.coreutils", "**/coreutils/NEWS"]
+
+  [[doc.level]]
+  name   = "release"
+  start  = '"* " any as title'
+  key    = "header"
+  insert = "top"
+
+  [[doc.level]]
+  name  = "category"
+  start = '"** " any as title'
+  key   = "header"
+
+  [[doc.level]]
+  name   = "item"
+  start  = 'after_blank spaces(2) any'
+  key    = "text"
+  insert = "bottom"
+
+# 3. GnuCOBOL-style NEWS (outline, no dates)
 [[doc]]
 paths = ["NEWS", "**/NEWS"]
 
@@ -31,7 +52,28 @@ paths = ["NEWS", "**/NEWS"]
   key    = "header"
   insert = "bottom"
 
-# 3. Keep a Changelog Markdown
+# 3. CPython What's New & reStructuredText (.rst)
+[[doc]]
+paths = ["*.rst", "**/*.rst", "Doc/whatsnew/*.rst", "Misc/NEWS"]
+
+  [[doc.level]]
+  name  = "section"
+  start = 'underline("=") as title'
+  key   = "header"
+
+  [[doc.level]]
+  name  = "subsection"
+  start = 'underline("-") as title'
+  key   = "header"
+  order = "alpha-asc"
+
+  [[doc.level]]
+  name   = "item"
+  start  = '"* " any'
+  key    = "text"
+  insert = "bottom"
+
+# 4. Keep a Changelog Markdown
 [[doc]]
 paths = ["CHANGELOG.md", "**/CHANGELOG.md"]
 

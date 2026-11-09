@@ -26,3 +26,4 @@ std::string writeDocument(const Document& doc,
 void dumpDocumentTree(const Document& doc, std::ostream& out);
 
 }  // namespace docmerge::doc
+

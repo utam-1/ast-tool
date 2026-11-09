@@ -628,3 +628,4 @@ std::string discoverConfigPath(const std::string& explicitPath,
 }
 
 }  // namespace docmerge::config
+

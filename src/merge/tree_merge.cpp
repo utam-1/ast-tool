@@ -13,6 +13,135 @@ namespace docmerge::merge {
 
 namespace {
 
+// Aligns `occurrenceKey`s across `base`, `ours`, and `theirs` children so that
+// duplicate `keyText` blocks (such as multiple commits by the same author on the same day
+// in GCC ChangeLogs) match unchanged base blocks by content hash first before positional fallback.
+void alignOccurrenceKeys(std::vector<doc::Block>& baseChildren,
+                         std::vector<doc::Block>& oursChildren,
+                         std::vector<doc::Block>& theirsChildren) {
+    std::map<std::string, std::vector<size_t>> bByKey;
+    std::map<std::string, std::vector<size_t>> oByKey;
+    std::map<std::string, std::vector<size_t>> tByKey;
+    std::set<std::string> allKeyTexts;
+
+    for (size_t i = 0; i < baseChildren.size(); ++i) {
+        bByKey[baseChildren[i].keyText].push_back(i);
+        allKeyTexts.insert(baseChildren[i].keyText);
+    }
+    for (size_t i = 0; i < oursChildren.size(); ++i) {
+        oByKey[oursChildren[i].keyText].push_back(i);
+        allKeyTexts.insert(oursChildren[i].keyText);
+    }
+    for (size_t i = 0; i < theirsChildren.size(); ++i) {
+        tByKey[theirsChildren[i].keyText].push_back(i);
+        allKeyTexts.insert(theirsChildren[i].keyText);
+    }
+
+    for (const std::string& K : allKeyTexts) {
+        const auto& bIdxs = bByKey[K];
+        const auto& oIdxs = oByKey[K];
+        const auto& tIdxs = tByKey[K];
+
+        if (bIdxs.size() <= 1 && oIdxs.size() <= 1 && tIdxs.size() <= 1) {
+            for (size_t idx : bIdxs) baseChildren[idx].occurrenceKey = K;
+            for (size_t idx : oIdxs) oursChildren[idx].occurrenceKey = K;
+            for (size_t idx : tIdxs) theirsChildren[idx].occurrenceKey = K;
+            continue;
+        }
+
+        // Assign canonical keys K#1 .. K#p to base occurrences
+        for (size_t i = 0; i < bIdxs.size(); ++i) {
+            baseChildren[bIdxs[i]].occurrenceKey = K + "#" + std::to_string(i + 1);
+        }
+
+        auto matchSideToBase = [&](std::vector<doc::Block>& sideChildren,
+                                   const std::vector<size_t>& sIdxs) {
+            std::vector<bool> bUsed(bIdxs.size(), false);
+            std::vector<bool> sUsed(sIdxs.size(), false);
+
+            // Pass 1: Exact hash match with base
+            for (size_t sj = 0; sj < sIdxs.size(); ++sj) {
+                const uint64_t sHash = sideChildren[sIdxs[sj]].hash;
+                for (size_t bi = 0; bi < bIdxs.size(); ++bi) {
+                    if (!bUsed[bi] && baseChildren[bIdxs[bi]].hash == sHash) {
+                        sideChildren[sIdxs[sj]].occurrenceKey =
+                            baseChildren[bIdxs[bi]].occurrenceKey;
+                        bUsed[bi] = true;
+                        sUsed[sj] = true;
+                        break;
+                    }
+                }
+            }
+
+            // Pass 2: Match remaining modified blocks in order with remaining base blocks
+            for (size_t sj = 0; sj < sIdxs.size(); ++sj) {
+                if (sUsed[sj]) continue;
+                for (size_t bi = 0; bi < bIdxs.size(); ++bi) {
+                    if (!bUsed[bi]) {
+                        sideChildren[sIdxs[sj]].occurrenceKey =
+                            baseChildren[bIdxs[bi]].occurrenceKey;
+                        bUsed[bi] = true;
+                        sUsed[sj] = true;
+                        break;
+                    }
+                }
+            }
+
+            // Return indices into sideChildren that were newly added beyond base count
+            std::vector<size_t> extraSideIdxs;
+            for (size_t sj = 0; sj < sIdxs.size(); ++sj) {
+                if (!sUsed[sj]) {
+                    extraSideIdxs.push_back(sIdxs[sj]);
+                }
+            }
+            return extraSideIdxs;
+        };
+
+        std::vector<size_t> extraO = matchSideToBase(oursChildren, oIdxs);
+        std::vector<size_t> extraT = matchSideToBase(theirsChildren, tIdxs);
+
+        // Pass 3: Align newly added blocks with key K between ours and theirs
+        std::vector<bool> extraTUsed(extraT.size(), false);
+        size_t sharedAddCounter = 0;
+
+        for (size_t oj = 0; oj < extraO.size(); ++oj) {
+            const uint64_t oHash = oursChildren[extraO[oj]].hash;
+            bool matchedIdentical = false;
+            for (size_t tj = 0; tj < extraT.size(); ++tj) {
+                if (!extraTUsed[tj] && theirsChildren[extraT[tj]].hash == oHash) {
+                    ++sharedAddCounter;
+                    const std::string sharedKey =
+                        K + "#add_shared_" + std::to_string(sharedAddCounter);
+                    oursChildren[extraO[oj]].occurrenceKey = sharedKey;
+                    theirsChildren[extraT[tj]].occurrenceKey = sharedKey;
+                    extraTUsed[tj] = true;
+                    matchedIdentical = true;
+                    break;
+                }
+            }
+            if (!matchedIdentical) {
+                // If base had 0 occurrences and both sides added 1 occurrence (e.g. new release header),
+                // let them share the key so `same_key = "merge"` can merge their children.
+                if (bIdxs.empty() && extraO.size() == 1 && extraT.size() == 1 && !extraTUsed[0]) {
+                    const std::string sharedKey = K + "#add_shared_1";
+                    oursChildren[extraO[oj]].occurrenceKey = sharedKey;
+                    theirsChildren[extraT[0]].occurrenceKey = sharedKey;
+                    extraTUsed[0] = true;
+                } else {
+                    oursChildren[extraO[oj]].occurrenceKey =
+                        K + "#add_ours_" + std::to_string(oj + 1);
+                }
+            }
+        }
+        for (size_t tj = 0; tj < extraT.size(); ++tj) {
+            if (!extraTUsed[tj]) {
+                theirsChildren[extraT[tj]].occurrenceKey =
+                    K + "#add_theirs_" + std::to_string(tj + 1);
+            }
+        }
+    }
+}
+
 const doc::Block* findChildByOccurrenceKey(const std::vector<doc::Block>& children,
                                            const std::string& occKey) {
     for (const auto& c : children) {
@@ -59,9 +188,9 @@ doc::Block mergeBlockRecursive(const doc::Block* b,
                                std::ostream* explainOut,
                                size_t& conflictCount);
 
-bool mergeChildrenList(const std::vector<doc::Block>& baseChildren,
-                       const std::vector<doc::Block>& oursChildren,
-                       const std::vector<doc::Block>& theirsChildren,
+bool mergeChildrenList(std::vector<doc::Block> baseChildren,
+                       std::vector<doc::Block> oursChildren,
+                       std::vector<doc::Block> theirsChildren,
                        int childLevel,
                        const config::DocRule& docRule,
                        const ConflictMarkerConfig& markerCfg,
@@ -72,6 +201,8 @@ bool mergeChildrenList(const std::vector<doc::Block>& baseChildren,
     if (baseChildren.empty() && oursChildren.empty() && theirsChildren.empty()) {
         return true;
     }
+
+    alignOccurrenceKeys(baseChildren, oursChildren, theirsChildren);
 
     // Collect union of all occurrenceKeys preserving appearance order
     std::vector<std::string> allKeys;
@@ -148,7 +279,6 @@ bool mergeChildrenList(const std::vector<doc::Block>& baseChildren,
         } else {
             // Existed in base
             if (o == nullptr && t == nullptr) {
-                // Deleted on both sides
                 if (explainOut != nullptr) {
                     *explainOut << "[explain] delete both-removed " << lvlRule.name
                                 << " key=\"" << b->keyText << "\"\n";
@@ -157,14 +287,12 @@ bool mergeChildrenList(const std::vector<doc::Block>& baseChildren,
             }
             if (o == nullptr && t != nullptr) {
                 if (t->hash == b->hash) {
-                    // Deleted by ours, unchanged by theirs -> delete
                     if (explainOut != nullptr) {
                         *explainOut << "[explain] delete ours-removed " << lvlRule.name
                                     << " key=\"" << b->keyText << "\"\n";
                     }
                     continue;
                 }
-                // Deleted by ours, modified by theirs -> conflict
                 if (explainOut != nullptr) {
                     *explainOut << "[explain] conflict delete/modify " << lvlRule.name
                                 << " key=\"" << b->keyText << "\"\n";
@@ -177,14 +305,12 @@ bool mergeChildrenList(const std::vector<doc::Block>& baseChildren,
             }
             if (o != nullptr && t == nullptr) {
                 if (o->hash == b->hash) {
-                    // Unchanged by ours, deleted by theirs -> delete
                     if (explainOut != nullptr) {
                         *explainOut << "[explain] delete theirs-removed " << lvlRule.name
                                     << " key=\"" << b->keyText << "\"\n";
                     }
                     continue;
                 }
-                // Modified by ours, deleted by theirs -> conflict
                 if (explainOut != nullptr) {
                     *explainOut << "[explain] conflict modify/delete " << lvlRule.name
                                 << " key=\"" << b->keyText << "\"\n";
@@ -214,7 +340,6 @@ bool mergeChildrenList(const std::vector<doc::Block>& baseChildren,
                 }
                 surviving.push_back(SurvivingChild{*t, true, true, true});
             } else {
-                // Both changed
                 if (o->hash == t->hash) {
                     surviving.push_back(SurvivingChild{*o, true, true, true});
                 } else {
@@ -234,7 +359,6 @@ bool mergeChildrenList(const std::vector<doc::Block>& baseChildren,
         return true;
     }
 
-    // Determine dominant levelRule for ordering these siblings
     const int domLvl = surviving.front().block.level;
     const size_t domIdx =
         (domLvl >= 1 && static_cast<size_t>(domLvl) <= docRule.levels.size())
@@ -266,7 +390,6 @@ doc::Block mergeBlockRecursive(const doc::Block* b,
     out.occurrenceKey = o.occurrenceKey;
     out.captures = o.captures;
 
-    // 1. Merge `lead` lines using 3-way text merge
     const std::vector<doc::Line> emptyLines;
     const std::vector<doc::Line>& bLead =
         (b != nullptr) ? b->lead : (o.lead == t.lead ? o.lead : emptyLines);
@@ -276,7 +399,6 @@ doc::Block mergeBlockRecursive(const doc::Block* b,
     }
     out.lead = leadDiff3.toLines(markerCfg);
 
-    // 2. Merge `children` recursively
     const std::vector<doc::Block> emptyChildren;
     const std::vector<doc::Block>& bChildren = (b != nullptr) ? b->children : emptyChildren;
     std::vector<doc::Block> mergedChildren;
@@ -291,7 +413,6 @@ doc::Block mergeBlockRecursive(const doc::Block* b,
                                            mergedChildren,
                                            conflictCount);
     if (!orderOk) {
-        // Conflicting reordering of children on both sides: emit conflict for this parent block
         if (explainOut != nullptr) {
             *explainOut << "[explain] conflict: children reordered differently on both sides under "
                         << o.levelName << " \"" << o.keyText << "\"\n";
@@ -302,7 +423,6 @@ doc::Block mergeBlockRecursive(const doc::Block* b,
     }
     out.children = std::move(mergedChildren);
 
-    // 3. Merge `trail` blank lines
     if (b != nullptr) {
         if (o.trail.size() == b->trail.size()) {
             out.trail = t.trail;
@@ -329,7 +449,6 @@ TreeMergeResult mergeDocumentTrees(
     res.document.eolStyle = oursDoc.eolStyle;
     res.document.hasBom = oursDoc.hasBom || baseDoc.hasBom;
 
-    // Fast path: if ours == base, take theirs; if theirs == base or ours == theirs, take ours
     if (oursDoc.root.hash == baseDoc.root.hash &&
         oursDoc.root.children.size() == baseDoc.root.children.size()) {
         const std::string bBytes = doc::writeDocument(baseDoc, markerCfg);

@@ -151,3 +151,4 @@ TEST_CASE(block_tree_roundtrip_all_formats) {
 int main() {
     return minitest::runAllTests();
 }
+

@@ -25,3 +25,4 @@ TreeMergeResult mergeDocumentTrees(
     std::ostream* explainOut = nullptr);
 
 }  // namespace docmerge::merge
+

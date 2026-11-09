@@ -28,3 +28,4 @@ Document parseDocumentLines(const SplitDocumentLines& split,
 void computeBlockKeysAndHashes(Block& block, const config::DocRule& docRule);
 
 }  // namespace docmerge::doc
+

@@ -42,6 +42,7 @@ bool parseQuotedLiteral(std::string_view s, size_t& i, std::string& outText, std
             char esc = s[i++];
             if (esc == 'n') outText.push_back('\n');
             else if (esc == 't') outText.push_back('\t');
+            else if (esc == 'f') outText.push_back('\f');
             else if (esc == '"' || esc == '\\') outText.push_back(esc);
             else {
                 outText.push_back(esc);
@@ -62,11 +63,25 @@ std::string readIdentifier(std::string_view s, size_t& i) {
     return std::string(s.substr(start, i - start));
 }
 
+bool isUnderlineLine(std::string_view nextLine, char underlineChar, size_t titleLen) noexcept {
+    const std::string trimmed = util::trimTrailingWhitespace(nextLine);
+    if (trimmed.size() < 3 || trimmed.size() < titleLen) {
+        return false;
+    }
+    for (char c : trimmed) {
+        if (c != underlineChar) {
+            return false;
+        }
+    }
+    return true;
+}
+
 }  // namespace
 
 bool compilePattern(std::string_view src, CompiledPattern& outPattern, std::string& outError) {
     outPattern.source = std::string(src);
     outPattern.elements.clear();
+    outPattern.consumesNextLineUnderline = false;
 
     size_t i = 0;
     skipSpaces(src, i);
@@ -103,6 +118,30 @@ bool compilePattern(std::string_view src, CompiledPattern& outPattern, std::stri
                 elem.kind = ElementKind::Number;
             } else if (kw == "any") {
                 elem.kind = ElementKind::Any;
+            } else if (kw == "after_blank") {
+                elem.kind = ElementKind::AfterBlank;
+            } else if (kw == "underline") {
+                elem.kind = ElementKind::Underline;
+                if (i >= src.size() || src[i] != '(') {
+                    outError = "expected '(' after underline";
+                    return false;
+                }
+                ++i;
+                skipSpaces(src, i);
+                if (!parseQuotedLiteral(src, i, elem.textArg, outError)) {
+                    return false;
+                }
+                if (elem.textArg.size() != 1) {
+                    outError = "underline(\"c\") requires a single underline character";
+                    return false;
+                }
+                skipSpaces(src, i);
+                if (i >= src.size() || src[i] != ')') {
+                    outError = "expected ')' after underline(\"...\")";
+                    return false;
+                }
+                ++i;
+                outPattern.consumesNextLineUnderline = true;
             } else if (kw == "spaces") {
                 elem.kind = ElementKind::Spaces;
                 if (i >= src.size() || src[i] != '(') {
@@ -192,7 +231,9 @@ bool compilePattern(std::string_view src, CompiledPattern& outPattern, std::stri
     return true;
 }
 
-MatchResult matchLine(const CompiledPattern& pattern, std::string_view line) {
+MatchResult matchLine(const CompiledPattern& pattern,
+                      std::string_view line,
+                      const MatchContext& ctx) {
     MatchResult res;
     size_t pos = 0;
 
@@ -267,7 +308,63 @@ MatchResult matchLine(const CompiledPattern& pattern, std::string_view line) {
                 break;
             }
             case ElementKind::Any: {
+                // If preceded only by after_blank / spaces(N) (no literal/token matched),
+                // require at least one non-blank character so blank/whitespace-only lines don't match.
+                bool hasConcretePrefix = false;
+                for (const auto& prev : pattern.elements) {
+                    if (&prev == &elem) break;
+                    if (prev.kind != ElementKind::AfterBlank &&
+                        prev.kind != ElementKind::Spaces &&
+                        prev.kind != ElementKind::Ws &&
+                        prev.kind != ElementKind::Tab) {
+                        hasConcretePrefix = true;
+                        break;
+                    }
+                }
+                if (!hasConcretePrefix) {
+                    bool allBlank = true;
+                    for (size_t k = pos; k < line.size(); ++k) {
+                        if (!isSpaceOrTab(line[k])) {
+                            allBlank = false;
+                            break;
+                        }
+                    }
+                    if (allBlank) {
+                        return res;
+                    }
+                }
                 pos = line.size();
+                break;
+            }
+            case ElementKind::AfterBlank: {
+                if (!ctx.precededByBlank) {
+                    return res;
+                }
+                break;
+            }
+            case ElementKind::Underline: {
+                // Title line must be non-blank, not start with spaces/dots (`..`), and not itself be an underline
+                const std::string trimmedTitle = util::trimTrailingWhitespace(line.substr(pos));
+                if (trimmedTitle.empty() || isSpaceOrTab(trimmedTitle[0]) ||
+                    util::startsWith(trimmedTitle, "..")) {
+                    return res;
+                }
+                const char uChar = elem.textArg[0];
+                bool allSameAsUnderline = true;
+                for (char c : trimmedTitle) {
+                    if (c != uChar) {
+                        allSameAsUnderline = false;
+                        break;
+                    }
+                }
+                if (allSameAsUnderline) {
+                    return res;
+                }
+                if (!ctx.hasNextLine || !isUnderlineLine(ctx.nextLineText, uChar, trimmedTitle.size())) {
+                    return res;
+                }
+                pos = line.size();
+                res.consumedNextLine = true;
                 break;
             }
         }

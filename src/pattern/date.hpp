@@ -50,3 +50,4 @@ bool matchDateAt(const DateFormat& fmt,
 int parseDateStringToInt(std::string_view text);
 
 }  // namespace docmerge::pattern
+

@@ -26,3 +26,4 @@ int compareVersions(const ParsedVersion& a, const ParsedVersion& b);
 int compareVersionStrings(std::string_view a, std::string_view b);
 
 }  // namespace docmerge::pattern
+

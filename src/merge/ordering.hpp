@@ -31,3 +31,4 @@ OrderChildrenResult orderAndNormalizeChildren(
     const std::string& eolStyle);
 
 }  // namespace docmerge::merge
+

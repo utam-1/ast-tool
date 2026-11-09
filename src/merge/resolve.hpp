@@ -22,3 +22,4 @@ SplitConflictFileResult splitConflictedFile(std::string_view rawBytes,
                                             std::string_view filePathForError);
 
 }  // namespace docmerge::merge
+

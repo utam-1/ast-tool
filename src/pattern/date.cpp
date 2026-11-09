@@ -221,3 +221,4 @@ int parseDateStringToInt(std::string_view text) {
 }
 
 }  // namespace docmerge::pattern
+

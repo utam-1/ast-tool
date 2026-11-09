@@ -30,3 +30,4 @@ VerificationResult verifyMergedOutput(
     const merge::ConflictMarkerConfig& markerCfg);
 
 }  // namespace docmerge::verify
+

@@ -105,3 +105,4 @@ SplitConflictFileResult splitConflictedFile(std::string_view rawBytes,
 }
 
 }  // namespace docmerge::merge
+

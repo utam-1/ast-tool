@@ -109,13 +109,20 @@ Document parseDocumentLines(const SplitDocumentLines& split,
     for (size_t lineIdx = 0; lineIdx < split.lines.size(); ++lineIdx) {
         const Line& L = split.lines[lineIdx];
 
+        pattern::MatchContext matchCtx;
+        matchCtx.precededByBlank = !pendingBlank.empty();
+        if (lineIdx + 1 < split.lines.size()) {
+            matchCtx.hasNextLine = true;
+            matchCtx.nextLineText = split.lines[lineIdx + 1].text;
+        }
+
         int matchedLevel = 0;
         pattern::MatchResult firstMatch;
         std::vector<std::string> overlappingLevels;
 
         for (size_t lvlIdx = 0; lvlIdx < docRule.levels.size(); ++lvlIdx) {
             const auto& lvlRule = docRule.levels[lvlIdx];
-            pattern::MatchResult mr = pattern::matchLine(lvlRule.startPattern, L.text);
+            pattern::MatchResult mr = pattern::matchLine(lvlRule.startPattern, L.text, matchCtx);
             if (mr.matched) {
                 if (matchedLevel == 0) {
                     matchedLevel = lvlRule.levelIndex;
@@ -169,6 +176,10 @@ Document parseDocumentLines(const SplitDocumentLines& split,
             node.levelName = lvlRule.name;
             node.captures = std::move(firstMatch.captures);
             node.lead.push_back(L);
+            if (firstMatch.consumedNextLine && lineIdx + 1 < split.lines.size()) {
+                ++lineIdx;
+                node.lead.push_back(split.lines[lineIdx]);
+            }
 
             Block* parent = stack.back();
             parent->children.push_back(std::move(node));

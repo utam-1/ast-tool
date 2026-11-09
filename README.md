@@ -27,7 +27,6 @@ You can infer a starter config from an existing documentation file:
 docmerge init CHANGELOG.md > .docmerge.toml
 docmerge check CHANGELOG.md
 ```
-Or copy one of the ready-made configurations from [`examples/docmerge.toml`](examples/docmerge.toml) (supports **GNU ChangeLog**, **GnuCOBOL NEWS**, and **Keep a Changelog** `CHANGELOG.md`).
 
 ### 2. Add `.gitattributes` to your repository
 Commit `.gitattributes` so Git knows which files use `docmerge`:

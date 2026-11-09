@@ -39,16 +39,21 @@ InitInferenceResult inferConfigFromSample(std::string_view filePath,
 
     const std::vector<CandidatePattern> catalogue = {
         {"entry", "date(YYYY-MM-DD) as date ws any as who", "header", "top", true, false, 1},
+        {"release", "\"Version \" version as version any", "header", "top", false, true, 1},
         {"release", "\"## [\" version as version \"]\" any", "header", "top", false, true, 1},
         {"release", "\"## \" version as version any", "header", "top", false, true, 1},
         {"release", "\"## \" any as title", "header", "top", false, false, 1},
+        {"section", "underline(\"=\") as title", "header", "bottom", false, false, 1},
         {"section", "\"* \" any as title", "header", "bottom", false, false, 1},
+        {"subsection", "underline(\"-\") as title", "header", "bottom", false, false, 2},
         {"category", "\"### \" any as title", "header", "bottom", false, false, 2},
         {"entry", "\"** \" any as title", "header", "bottom", false, false, 2},
         {"item", "tab \"* \" any", "text", "bottom", false, false, 3},
+        {"item", "\"* \" any", "text", "bottom", false, false, 3},
         {"item", "\"- \" any", "text", "bottom", false, false, 3},
         {"item", "spaces(2) \"* \" any", "text", "bottom", false, false, 3},
         {"item", "spaces(2) \"- \" any", "text", "bottom", false, false, 3},
+        {"item", "after_blank spaces(2) any", "text", "bottom", false, false, 3},
     };
 
     std::vector<ScoredCandidate> matched;
@@ -68,10 +73,20 @@ InitInferenceResult inferConfigFromSample(std::string_view filePath,
 
         for (size_t i = 0; i < split.lines.size(); ++i) {
             if (lineClaimed[i]) continue;
-            auto mr = pattern::matchLine(pat, split.lines[i].text);
+            pattern::MatchContext ctx;
+            ctx.precededByBlank = (i > 0 && split.lines[i - 1].isBlank());
+            if (i + 1 < split.lines.size()) {
+                ctx.hasNextLine = true;
+                ctx.nextLineText = split.lines[i + 1].text;
+            }
+            auto mr = pattern::matchLine(pat, split.lines[i].text, ctx);
             if (mr.matched) {
                 ++count;
                 hitLines.push_back(i);
+                if (mr.consumedNextLine && i + 1 < split.lines.size()) {
+                    hitLines.push_back(i + 1);
+                    ++i;
+                }
                 if (cand.hasDateCapture) {
                     int d = pattern::parseDateStringToInt(mr.captures["date"]);
                     if (d > 0) dateVals.push_back(d);
@@ -83,7 +98,6 @@ InitInferenceResult inferConfigFromSample(std::string_view filePath,
         }
 
         if (count >= 2) {
-            // Avoid selecting duplicate hierarchyRank if already selected
             bool rankTaken = false;
             for (const auto& existing : matched) {
                 if (existing.cand.hierarchyRank == cand.hierarchyRank) {
@@ -136,7 +150,6 @@ InitInferenceResult inferConfigFromSample(std::string_view filePath,
         }
     }
 
-    // Fallback if file had too few lines to hit >= 2 matches
     if (matched.empty()) {
         ScoredCandidate fallback;
         fallback.cand = {"entry", "\"## \" any as title", "header", "top", false, false, 1};
