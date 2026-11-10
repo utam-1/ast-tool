@@ -1,8 +1,11 @@
 # docmerge
 
-A config-driven 3-way merge tool for documentation files (`NEWS`, `ChangeLog`, `CHANGELOG.md`, release notes). Written in C++17 with **zero third-party dependencies**.
+A config-driven 3-way merge tool for documentation files (`NEWS`, `ChangeLog`, `CHANGELOG.md`, release notes).
 
 `docmerge` resolves the merge conflicts developers hate most—*"both of us added a changelog entry at the top of the file"*—by parsing documentation into a hierarchy of blocks defined in `.docmerge.toml`, merging children by key, ordering new entries deterministically (`date-desc`, `version-desc`, `alpha-asc`, or position-based), and verifying safety invariants before writing.
+
+I vibe coded almost 70% of this (just like most projects out there). The algorithm
+and the idea in general is something I came up with while working on open source projects. If you just came across this project, use it and let me know if it works for you.
 
 ---
 
@@ -69,3 +72,8 @@ docmerge resolve CHANGELOG.md
 | `docmerge install` | Configure the Git `docmerge` merge driver in `.git/config` |
 
 Global flags: `--config PATH`, `--explain`, `--dry-run`, `--help`, `--version`.
+
+---
+## Contributing
+If you stumbled upon this project and you're interested in improving it, feel free
+to open up issues and create PRs.
